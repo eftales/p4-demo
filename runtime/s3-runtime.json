@@ -1,0 +1,53 @@
+{
+  "target": "bmv2",
+  "p4info": "build/p4info.txt",
+  "bmv2_json": "build/main.json",
+  "table_entries": [
+    {
+      "table": "MyIngress.dst_mac_exact",
+      "default_action": true,
+      "action_name": "MyIngress.drop",
+      "action_params": { }
+    },
+    {
+      "table": "MyIngress.dst_mac_exact",
+      "match": {
+        "hdr.ethernet.dstAddr": "00:00:00:00:00:01"
+      },
+      "action_name": "MyIngress.mac_forward",
+      "action_params": {
+        "port": 1
+      }
+    },
+    {
+      "table": "MyIngress.dst_mac_exact",
+      "match": {
+        "hdr.ethernet.dstAddr": "00:00:00:00:00:02"
+      },
+      "action_name": "MyIngress.mac_forward",
+      "action_params": {
+        "port": 1
+      }
+    },
+    {
+      "table": "MyIngress.dst_mac_exact",
+      "match": {
+        "hdr.ethernet.dstAddr": "00:00:00:00:00:03"
+      },
+      "action_name": "MyIngress.mac_forward",
+      "action_params": {
+        "port": 2
+      }
+    },
+    {
+      "table": "MyIngress.dst_mac_exact",
+      "match": {
+        "hdr.ethernet.dstAddr": "00:00:00:00:00:04"
+      },
+      "action_name": "MyIngress.mac_forward",
+      "action_params": {
+        "port": 2
+      }
+    }
+  ]
+}
