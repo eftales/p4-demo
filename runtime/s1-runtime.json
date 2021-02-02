@@ -4,6 +4,22 @@
   "bmv2_json": "build/main.json",
   "table_entries": [
     {
+      "table": "MyIngress.dst_lsc_exact",
+      "default_action": true,
+      "action_name": "MyIngress.drop",
+      "action_params": { }
+    },
+    {
+      "table": "MyIngress.dst_lsc_exact",
+      "match": {
+        "hdr.lsc.lsc_dst": 1
+      },
+      "action_name": "MyIngress.lsc_forward",
+      "action_params": {
+        "port": 1
+      }
+    },
+    {
       "table": "MyIngress.dst_mac_exact",
       "default_action": true,
       "action_name": "MyIngress.drop",

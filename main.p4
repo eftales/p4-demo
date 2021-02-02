@@ -2,7 +2,8 @@
 #include <core.p4>
 #include <v1model.p4>
 
-const bit<16> TYPE_IPV4 = 0x800;
+const bit<16> TYPE_IPV4 = 0x0800;
+const bit<16> TYPE_LSC = 0x09ab;
 const bit<32> MAX_MAC_ADDR = 1 << 16;
 
 
@@ -14,10 +15,25 @@ typedef bit<9>  egressSpec_t;
 typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
 
+typedef bit<16> lsc_pre_t;
+typedef bit<24> lsc_colony_id_t;
+typedef bit<8> lsc_dst_t;
+typedef bit<8> lsc_src_t;
+typedef bit<8> lsc_ctrl_t;
+
+
 header ethernet_t {
     macAddr_t dstAddr;
     macAddr_t srcAddr;
     bit<16>   etherType;
+}
+
+header lsc_t {
+    lsc_pre_t lsc_pre;
+    lsc_colony_id_t lsc_colony_id;
+    lsc_dst_t lsc_dst;
+    lsc_src_t lsc_src;
+    lsc_ctrl_t lsc_ctrl;
 }
 
 header ipv4_t {
@@ -41,6 +57,7 @@ struct metadata {
 
 struct headers {
     ethernet_t   ethernet;
+    lsc_t        lsc;
     ipv4_t       ipv4;
 }
 
@@ -60,9 +77,15 @@ parser MyParser(packet_in packet,
     state parse_ethernet {
         packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
+            TYPE_LSC: parse_lsc;
             TYPE_IPV4: parse_ipv4;
             default: accept;
         }
+    }
+
+    state parse_lsc {
+        packet.extract(hdr.lsc);
+        transition parse_ipv4;
     }
 
     state parse_ipv4 {
@@ -117,6 +140,22 @@ control MyIngress(inout headers hdr,
     }
     */
 
+    action lsc_forward(egressSpec_t port) {
+        hdr.lsc.setValid();
+        standard_metadata.egress_spec = port;
+    }
+
+    table dst_lsc_exact {
+        key = {
+            hdr.lsc.lsc_dst: exact;
+        }
+        actions = {
+            lsc_forward;
+            drop;
+            NoAction;
+        }
+    }
+
     action mac_forward(egressSpec_t port) {
         standard_metadata.egress_spec = port;
         ingressMACCounter.count((bit<32>) hdr.ethernet.dstAddr);
@@ -139,8 +178,13 @@ control MyIngress(inout headers hdr,
             ipv4_lpm.apply();
         }
         */
-
-        dst_mac_exact.apply();
+        if (hdr.lsc.isValid()) {
+            dst_lsc_exact.apply();
+        }
+        else{
+            dst_mac_exact.apply();
+        }
+        
     }
 }
 
@@ -185,6 +229,7 @@ control MyComputeChecksum(inout headers  hdr, inout metadata meta) {
 control MyDeparser(packet_out packet, in headers hdr) {
     apply {
         packet.emit(hdr.ethernet);
+        packet.emit(hdr.lsc);
         packet.emit(hdr.ipv4);
 
         
